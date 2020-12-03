@@ -19,7 +19,20 @@ executable cheops-email
   -- other-modules:
   -- other-extensions:
   build-depends:
-    base >=4.11 && <4.14,
-    cheops-db
-  -- hs-source-dirs:
+    base >=4.11 && <4.14
+    , cheops-db
+    , aeson
+    , aeson-pretty
+    , bytestring
+    , lens
+    , text
+    , time
+    , servant
+    , servant-server
+    , servant-swagger
+    , servant-swagger-ui
+    , swagger2
+    , warp
+  hs-source-dirs:      app
   default-language:    Haskell2010
+  ghc-options:         -Wall
