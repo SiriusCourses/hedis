@@ -1,0 +1,16 @@
+{
+  "nixpkgs": {
+    "owner": "NixOS",
+    "repo": "nixpkgs-channels",
+    "branch": "nixos-19.09",
+    "rev": "75f4ba05c63be3f147bcc2f7bd4ba1f029cedcb1",
+    "sha256": "157c64220lf825ll4c0cxsdwg7cxqdx4z559fdp7kpz0g6p8fhhr"
+  },
+  "prometheus-haskell": {
+    "owner": "qnikst",
+    "repo": "prometheus-haskell",
+    "branch": "master",
+    "rev": "f9401db8406b1b849bccdf74f19093f463336cf0",
+    "sha256": "14jv7mi5cqcwlry2mci22ywvhprkyq8ysmvikrv1qdyyycig5k8r"
+  }
+}

@@ -1,7 +1,7 @@
-{ pkgs ? import <nixpkgs> {} }:
-pkgs.mkShell {
+{ pkgs ? import ./nix {} }:
+pkgs.haskellPackages.shellFor {
+   packages = _ : [pkgs.haskellPackages.cheops-email];
    nativeBuildInputs = with pkgs.haskellPackages; [
-     brittany
      cabal-install
      ghcid
    ];
