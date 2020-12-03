@@ -24,6 +24,7 @@ executable cheops-email
     , aeson
     , aeson-pretty
     , bytestring
+    , cheops-lib
     , lens
     , text
     , time

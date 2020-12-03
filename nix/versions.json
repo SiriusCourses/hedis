@@ -12,5 +12,12 @@
     "branch": "master",
     "rev": "f9401db8406b1b849bccdf74f19093f463336cf0",
     "sha256": "14jv7mi5cqcwlry2mci22ywvhprkyq8ysmvikrv1qdyyycig5k8r"
+  },
+  "hedis": {
+    "owner": "cheopslab",
+    "repo": "hedis",
+    "branch": "sentinel",
+    "rev": "640699b04fcd639ce6f4687c1714aa805edd2c24",
+    "sha256": "103pqhn1b5yxyqckvpx3yfhkyfl8mmndknvagrzspl1qz0fjcbvg"
   }
 }
