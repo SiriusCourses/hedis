@@ -1,0 +1,24 @@
+stages:
+  - build
+  - push
+
+build:
+  stage: build
+  script:
+    - nix-build nix/release.nix
+  tags:
+    - nix
+
+push-email:
+  stage: push
+  script:
+    - nix-build nix/release.nix
+    - docker login "${CI_REGISTRY}" -u "${CI_REGISTRY_USER}" -p "${CI_REGISTRY_PASSWORD}"
+    - docker load < ./result
+    - docker tag registry.sirius.online/cheops-edu/cheops-email/cheops-email:latest registry.sirius.online/cheops-edu/cheops-email/cheops-email:${CI_COMMIT_REF_SLUG}
+    - docker push registry.sirius.online/cheops-edu/cheops-email/cheops-email:${CI_COMMIT_REF_SLUG}
+  tags:
+    - nix
+  only:
+    - master
+    - tags

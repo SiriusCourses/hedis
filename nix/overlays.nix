@@ -20,6 +20,12 @@ with { fetch = import ./fetch.nix; };
      }
   )
 
+  # docker images (TODO: move to a separate repo)
+  (self: super:
+      { sirius-base = self.callPackage ./pkgs/docker/base.nix {};
+      }
+  )
+
   (self: super:
     {
       haskellPackages = super.haskellPackages.override {
@@ -66,5 +72,21 @@ with { fetch = import ./fetch.nix; };
          hedis=super.haskell.lib.dontCheck(haskellSuper.hedis);
       });
   })
+
+
+  (self: super: {
+    haskellPackages = super.haskellPackages.extend
+     (haskellSelf: haskellSuper:
+      { cheops-email = self.callPackage ./pkgs/cheops-email { inherit haskellSuper; };
+        cheops-email-exe = self.callPackage ./pkgs/cheops-email/cheops-email-exe.nix {
+           cheops-email = self.haskellPackages.cheops-email;
+        };
+     });
+  } // {
+     docker-cheops-email = self.callPackage ./pkgs/docker/cheops-email.nix {
+       cheops-email-exe = self.haskellPackages.cheops-email-exe;
+     };
+  })
+
 
 ]
