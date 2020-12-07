@@ -1,64 +1,53 @@
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DeriveDataTypeable         #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TypeOperators              #-}
-{-# LANGUAGE LambdaCase                 #-}
 module Main where
 
-import           Control.Lens
+import qualified Cheops.Db as Db
+import Cheops.Email.Server
 import qualified Cheops.K8s as K8s
-import           Data.Aeson
-import           Data.Proxy
-import           Data.Swagger
-import           Servant
-import           Servant.Swagger
-import           Servant.Swagger.UI
-import           Servant.API.Generic
-import           Network.Wai.Handler.Warp as Wrap
+import Cheops.Logger
+import qualified Hasql.Connection.Extended as HC
 
-newtype Item = Item { itemText :: String }
-  deriving (Eq, Show, Generic)
+k8sConfig' :: K8s.Config
+k8sConfig' =
+  K8s.Config
+    { K8s.configPort = 10022,
+      K8s.configReady = ["ready"],
+      K8s.configHealth = ["health"],
+      K8s.configPreStopHook = ["stop"]
+    }
 
-instance ToJSON Item
-instance FromJSON Item
-instance ToSchema Item
+loggerConfig' :: LoggerConfig
+loggerConfig' = LoggerConfig defCapacity Nothing
 
-type ExampleAPI = "example" :> Get '[JSON] String
+serverConfig' :: ServerConfig
+serverConfig' = ServerConfig {serverConfigPort = 8000}
 
-swaggerItem :: Swagger
-swaggerItem =
-  toSwagger (Proxy :: Proxy ExampleAPI)
-    & info.title        .~ "Example API"
-    & info.version      .~ "1.0"
-    & info.description  ?~ "This is a example description"
-    & host              ?~ "localhost"
+dbConfig' :: Db.Config
+dbConfig' =
+  Db.Config
+    { Db.configPostgres =
+        Just $
+          HC.PostgresConfig
+            { HC.postgresConfigHost = HC.Host "localhost",
+              HC.postgresConfigPort = HC.Port 5432,
+              HC.postgresConfigUser = HC.User "cheops",
+              HC.postgresConfigPassword = HC.Password "this_is_sparta",
+              HC.postgresConfigDatabase = HC.Database "cheops"
+            },
+      Db.configPostgresRaw = Nothing,
+      Db.configStripes = 1,
+      Db.configIdleTime = 10,
+      Db.configResourcePerStripe = 10,
+      Db.configConnectRetries = Nothing
+    }
 
-type API = SwaggerSchemaUI "swagger-ui" "swagger.json"
-      :<|> ExampleAPI
-
-
-k8sConfig :: K8s.Config
-k8sConfig = K8s.Config
-  { K8s.configPort = 10022
-  , K8s.configReady = ["ready"]
-  , K8s.configHealth = ["health"]
-  , K8s.configPreStopHook =["stop"]
-  }
-
-exampleApp :: Application
-exampleApp = serve (Proxy :: Proxy API) server
-
-server :: Server API
-server = swaggerSchemaUIServer swaggerItem
-    :<|> serveExample
- where serveExample = pure "Hello, Haskell!"
+config' :: Config
+config' =
+  Config
+    { loggerConfig = loggerConfig',
+      k8sConfig = k8sConfig',
+      serverConfig = serverConfig',
+      dbConfig = dbConfig'
+    }
 
 main :: IO ()
-main = do
-  let p = 8000
-  putStrLn $ "Run server on port " ++ show p
-  K8s.run k8sConfig (pure ())
-    $ Wrap.run p exampleApp
+main = run config'
