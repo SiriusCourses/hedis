@@ -19,5 +19,12 @@
     "branch": "sentinel",
     "rev": "640699b04fcd639ce6f4687c1714aa805edd2c24",
     "sha256": "103pqhn1b5yxyqckvpx3yfhkyfl8mmndknvagrzspl1qz0fjcbvg"
+  },
+  "HaskellNet": {
+    "owner": "jtdaugherty",
+    "repo": "HaskellNet",
+    "branch": "master",
+    "rev": "fbae7bbeff51a36d1bb59bd12fc8b2a23886330a",
+    "sha256": "0pn0wivlz1hscc3fzzrdz7821yqjb4l57pglx3wxz17iz97ysbz1"
   }
 }

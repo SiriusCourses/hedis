@@ -55,6 +55,7 @@ with { fetch = import ./fetch.nix; };
            prometheus-client       = (fetch "prometheus-haskell") + "/prometheus-client";
            prometheus-client-extra = (fetch "prometheus-haskell") + "/prometheus-client-extra";
            prometheus-metrics-ghc  = (fetch "prometheus-haskell") + "/prometheus-metrics-ghc";
+           HaskellNet = (fetch "HaskellNet");
            # Packages from cheops project. We should eventually put them to the separate repo or even opensource:
            cheops-db     = (super.cheops-package) + "/backend/cheops-db";
            cheops-lib    = (super.cheops-package) + "/backend/cheops-lib";

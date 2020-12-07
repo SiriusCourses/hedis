@@ -40,6 +40,7 @@ library
     , warp
     , mime-mail
     , vault
+    , HaskellNet
   default-extensions:
     OverloadedStrings
     DataKinds
