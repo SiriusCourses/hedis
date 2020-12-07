@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: cheops-email
+  name: cheops-email
+spec:
+  ports:
+  - name: web
+    port: 8000
+    protocol: TCP
+    targetPort: 8000
+  - name: health
+    port: 10120
+    protocol: TCP
+    targetPort: 10120
+  selector:
+    app: cheops-email
+  sessionAffinity: None
+  type: ClusterIP
