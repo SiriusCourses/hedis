@@ -69,7 +69,7 @@ executable cheops-email
     , time
   hs-source-dirs:      app
   default-language:    Haskell2010
-  ghc-options:         -Wall -threaded
+  ghc-options:         -Wall -threaded -rtsopts
   default-extensions:
     OverloadedStrings
     DataKinds

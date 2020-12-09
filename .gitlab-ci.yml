@@ -9,6 +9,7 @@ before_script:
   - if [ -z "${TAG}" ]; then TAG=${CI_COMMIT_REF_SLUG}; fi
   - if [ "${TAG}" = "master" ]; then TAG=${CI_COMMIT_SHA}; fi
   - echo "TAG => " ${TAG}
+  - echo "DEPLOY_NAMME => " ${DEPLOY_NAME}
 
 build:
   stage: build
