@@ -45,7 +45,7 @@ push-email-master:
       --set global.tag="${TAG}"
       --set global.url="${CI_ENVIRONMENT_URL}"
       --set deploy_name="${DEPLOY_NAME}"
-      --namespace=email-${CI_ENVIRONMENT_SLUG}"
+      --namespace="email-${CI_ENVIRONMENT_SLUG}"
       --wait
   only:
     - tags
