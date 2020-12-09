@@ -32,7 +32,8 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      labels: lab-noo
+      labels:
+        app: lab-noo
     spec:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
@@ -89,6 +90,8 @@ spec:
         key: app
         operator: Equal
         value: laboratory
+      imagePullSecrets:
+        - name: ndc-mjxwh
       initContainers:
       - command:
         - sh
