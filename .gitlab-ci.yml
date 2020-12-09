@@ -9,7 +9,8 @@ before_script:
   - if [ -z "${TAG}" ]; then TAG=${CI_COMMIT_REF_SLUG}; fi
   - if [ "${TAG}" = "master" ]; then TAG=${CI_COMMIT_SHA}; fi
   - echo "TAG => " ${TAG}
-  - echo "DEPLOY_NAMME => " ${DEPLOY_NAME}
+  - echo "DEPLOY_NAME => " ${DEPLOY_NAME}
+  - echo "CI_ENVIRONMMENT_SLUG => " ${CI_ENVIRONMENT_SLUG}
 
 build:
   stage: build
@@ -41,6 +42,7 @@ push-email-master:
    - kubectl get ns "email-${CI_ENVIRONMENT_SLUG}" || kubectl create ns "email-${CI_ENVIRONMENT_SLUG}"
    - helm upgrade
       --install "email-${CI_ENVIRONMENT_SLUG}" deploy/helm/charts/email/
+      -f "deploy/helm/charts/email/values.yaml"
       -f "deploy/helm/charts/email/charts/${DEPLOY_NAME}/values.yaml"
       --set global.env="${CI_ENVIRONMENT_SLUG}"
       --set global.tag="${TAG}"
