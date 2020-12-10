@@ -74,6 +74,7 @@ sirius email dev:
   stage: dev
   variables:
      STAGE_NAME: "DEV"
+     DEPLOY_NAME: "sirius"
   environment:
     name: dev
   only:
@@ -84,6 +85,7 @@ cpm email dev:
   stage: dev
   variables:
      STAGE_NAME: "DEV"
+     DEPLOY_NAME: "cpm"
   environment:
     name: dev
   only:
