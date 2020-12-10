@@ -16,7 +16,7 @@ spec:
 {{- if eq .Values.deploy_name "cpm" }}
 {{- if eq .Values.global.env "prod" }}
     matchExpressions:
-      - {key: app, operator: In, values: [lab-noo, laboratory]}
+      - {key: app, operator: In, values: [cheops-email, laboratory]}
 {{- else }}
     matchLabels:
       app: cheops-email
@@ -33,7 +33,7 @@ spec:
   template:
     metadata:
       labels:
-        app: lab-noo
+        app: cheops-email
     spec:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
