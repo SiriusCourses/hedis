@@ -39,7 +39,9 @@ push-email-master:
     - schedules
   when: manual
   script:
+   - set -x
    - kubectl get ns "email-${CI_ENVIRONMENT_SLUG}" || kubectl create ns "email-${CI_ENVIRONMENT_SLUG}"
+   - pwd
    - helm upgrade
       --install "email-${CI_ENVIRONMENT_SLUG}" deploy/helm/charts/email/
       -f "deploy/helm/charts/email/values.yaml"
