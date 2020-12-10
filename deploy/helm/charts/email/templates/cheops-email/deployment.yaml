@@ -40,25 +40,42 @@ spec:
           - matchExpressions:
              - key: node-role
                operator: In
-               values:
-                  - {{ $nodeRole }}
+               values: [ {{ $nodeRole }} ]
       containers:
         - name: cheops-email
           image: registry.sirius.online/cheops-edu/cheops-email/cheops-email:{{ .Values.global.tag }}
           imagePullPolicy: IfNotPresent
           env:
            - name: GHCRTS
-             value: {{ first (pluck .Values.global.env .Values.rts_config.email) | default .Values.rts_config.email._default }}
+             value: {{ .Values.email.rtsConfig | quote }}
+           - name: DB_POOL_PG_CONFIG
+             value: {{ .Values.email.db.main.uri | quote }}
+           - name: DB_POOL_STRIPES
+             value: {{ .Values.email.db.main.poolStripes | quote }}
+           - name: DB_POOL_IDLE_TIME
+             value: {{ .Values.email.db.main.poolIdleTime | quote }}
+           - name: DB_POOL_RESOURCE_PER_STRIPE
+             value: {{ .Values.email.db.main.poolResourcePerStripe | quote }}
+           - name: EMAIL_SERVER_PORT
+             value: {{ .Values.email.server.port | quote }}
+           - name: SMTP_SERVER
+             value: {{ .Values.email.smtp.server | quote }}
+           - name: SMTP_USER_NAME
+             value: {{ .Values.email.smtp.userName | quote }}
+           - name: SMTP_USER_EMAIL
+             value: {{ .Values.email.smtp.userEmail | quote }}
+           - name: SMTP_USER_PASSWORD
+             value: {{ .Values.email.smtp.password | quote }}
       lifecycle:
         preStop:
           httpGet:
            path: /stop
-           port: 10120
+           port: 10030
       livenessProbe:
         preStop:
           httpGet:
            path: /health
-           port: 10120
+           port: 10030
         failureThreshold: 5
         initialDelaySeconds: 5
         periodSeconds: 10
@@ -68,19 +85,19 @@ spec:
         preStop:
           httpGet:
            path: /ready
-           port: 10120
+           port: 10030
         failureThreshold: 5
         initialDelaySeconds: 5
         periodSeconds: 10
         successThreshold: 1
         timeoutSeconds: 5
       ports:
-        - containerPort: 8000
+        - containerPort: {{ .Values.email.server.port }}
           protocol: TCP
       resources:
         requests:
-          memory: {{ pluck .Values.global.env .Values.resources.email.requests.memory | first | default .Values.resources.email.requests.memory._default | quote }}
-          cpu: {{ pluck .Values.global.env .Values.resources.email.requests.cpu | first | default .Values.resources.email.requests.cpu._default | quote }}
+          memory: {{ .Values.email.resources.requests.memory | quote }}
+          cpu: {{ .Values.email.resources.requests.cpu | quote }}
       tolerations:
       - effect: NoSchedule
         key: node-role
@@ -92,19 +109,7 @@ spec:
         value: laboratory
       imagePullSecrets:
         - name: ndc-mjxwh
-      initContainers:
-      - command:
-        - sh
-        - -c
-        - sysctl -w net.core.somaxconn=1024 && sysctl -w kernel.shm_rmid_forced=0
-          && sysctl -w kernel.msgmax=65536
-        image: alpine:latest
-        imagePullPolicy: IfNotPresent
-        name: configure-sysctl
-        resources: {}
-        securityContext:
-          privileged: true
-          runAsUser: 0
       restartPolicy: Always
       securityContext: {}
       terminationGracePeriodSeconds: 30
+

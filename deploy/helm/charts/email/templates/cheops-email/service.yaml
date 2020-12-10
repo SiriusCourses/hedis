@@ -7,13 +7,13 @@ metadata:
 spec:
   ports:
   - name: web
-    port: 8000
+    port: {{ .Values.email.server.port }}
     protocol: TCP
-    targetPort: 8000
+    targetPort: {{ .Values.email.server.port }} 
   - name: health
-    port: 10120
+    port: 10030
     protocol: TCP
-    targetPort: 10120
+    targetPort: 10030
   selector:
     app: cheops-email
   sessionAffinity: None

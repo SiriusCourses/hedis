@@ -41,7 +41,9 @@ push-email-master:
   script:
    - set -x
    - kubectl get ns "email-${CI_ENVIRONMENT_SLUG}" || kubectl create ns "email-${CI_ENVIRONMENT_SLUG}"
-   - pwd
+   - export MAILER_PASSWORD="${DEPLOY_NAME}_mailer_password"
+   - export MAILER_USER="${DEPLOY_NAME}_mailer_user"
+   - export DB_URI="${DEPLOY_NAME}_db_uri"
    - helm upgrade
       --install "email-${CI_ENVIRONMENT_SLUG}" deploy/helm/charts/email/
       -f "deploy/helm/charts/email/values.yaml"
@@ -49,6 +51,9 @@ push-email-master:
       --set global.env="${CI_ENVIRONMENT_SLUG}"
       --set global.tag="${TAG}"
       --set global.url="${CI_ENVIRONMENT_URL}"
+      --set email.smtp.password="${!MAILER_PASSWORD}"
+      --set email.smtp.userEmail="${!MAILER_USER}"
+      --set email.db.postgres.uri="${!DB_URI}"
       --set deploy_name="${DEPLOY_NAME}"
       --namespace="email-${CI_ENVIRONMENT_SLUG}"
       --wait
