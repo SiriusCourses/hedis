@@ -49,7 +49,7 @@ spec:
            - name: GHCRTS
              value: {{ .Values.email.rtsConfig | quote }}
            - name: DB_POOL_PG_CONFIG
-             value: {{ .Values.email.db.main.uri | quote }}
+             value: {{ .Values.email.db.main.uri | b64dec }}
            - name: DB_POOL_STRIPES
              value: {{ .Values.email.db.main.poolStripes | quote }}
            - name: DB_POOL_IDLE_TIME

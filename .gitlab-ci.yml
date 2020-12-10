@@ -53,7 +53,7 @@ push-email-master:
       --set global.url="${CI_ENVIRONMENT_URL}"
       --set email.smtp.password="${!MAILER_PASSWORD}"
       --set email.smtp.userEmail="${!MAILER_USER}"
-      --set email.db.postgres.uri="${!DB_URI}"
+      --set email.db.main.uri="${!DB_URI}"
       --set deploy_name="${DEPLOY_NAME}"
       --namespace="email-${CI_ENVIRONMENT_SLUG}"
       --wait
