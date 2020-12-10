@@ -46,8 +46,8 @@ push-email-master:
    - export DB_URI="${DEPLOY_NAME}_db_uri"
    - helm upgrade
       --install "email-${CI_ENVIRONMENT_SLUG}" deploy/helm/charts/email/
-      -f "deploy/helm/charts/email/values.yaml"
-      -f "deploy/helm/charts/email/charts/${DEPLOY_NAME}/values.yaml"
+      -f "deploy/helm/charts/email/charts/${DEPLOY_NAME}/default.yaml"
+      -f "deploy/helm/charts/email/charts/${DEPLOY_NAME}/${CI_ENVIRONMENT_SLUG}.yaml"
       --set global.env="${CI_ENVIRONMENT_SLUG}"
       --set global.tag="${TAG}"
       --set global.url="${CI_ENVIRONMENT_URL}"
