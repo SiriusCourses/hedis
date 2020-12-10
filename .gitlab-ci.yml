@@ -10,7 +10,7 @@ before_script:
   - if [ "${TAG}" = "master" ]; then TAG=${CI_COMMIT_SHA}; fi
   - echo "TAG => " ${TAG}
   - echo "DEPLOY_NAME => " ${DEPLOY_NAME}
-  - echo "CI_ENVIRONMMENT_SLUG => " ${CI_ENVIRONMENT_SLUG}
+  - echo "CI_ENVIRONMENT_SLUG => " ${CI_ENVIRONMENT_SLUG}
 
 build:
   stage: build

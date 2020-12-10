@@ -19,11 +19,11 @@ spec:
       - {key: app, operator: In, values: [lab-noo, laboratory]}
 {{- else }}
     matchLabels:
-      app: lab-noo
+      app: cheops-email
 {{- end }}
 {{- else }}
     matchLabels:
-      app: lab-noo
+      app: cheops-email
 {{- end}}
   strategy:
     rollingUpdate:
