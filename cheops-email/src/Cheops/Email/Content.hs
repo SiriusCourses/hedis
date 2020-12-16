@@ -3,10 +3,13 @@
 module Cheops.Email.Content where
 
 import Cheops.Error
+import Control.Lens
 import Data.Aeson
+import Data.Int
 import Data.Swagger
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import qualified Hasql.Decoders as HD
 import Network.Mail.Mime
 import Servant.API.Generic
 import Text.Email.Validate
@@ -15,20 +18,40 @@ data EmailError
   = AuthError
   | SendError
   | InvalidEmailError
+  | InternalError
+  deriving (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance AsError EmailError where
   asError AuthError = Cheops.Error.Error "Ошибка аутентификации" Nothing
   asError SendError = Cheops.Error.Error "Ошибка при попытке отправить письмо" Nothing
   asError InvalidEmailError = Cheops.Error.Error "Некорректный адрес электронной почты" Nothing
+  asError InternalError = Cheops.Error.Error "Внутренняя ошибка сервиса" Nothing
 
 data EmailState
-  = Sent
-  | NotYetSent
-  | Error
+  = EmailStateSent
+  | EmailStatePending
+  | EmailStateProcessing
+  | EmailStateError
   deriving (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type EmailTaskId = Int
+_EmailStateText :: Prism' T.Text EmailState
+_EmailStateText = prism toTextual $ \case
+  "sent" -> Right EmailStateSent
+  "pending" -> Right EmailStatePending
+  "processing" -> Right EmailStateProcessing
+  "error" -> Right EmailStateError
+  e -> Left e
+  where
+    toTextual EmailStateSent = "sent"
+    toTextual EmailStatePending = "pending"
+    toTextual EmailStateProcessing = "processing"
+    toTextual EmailStateError = "error"
+
+instance HD.AsValue EmailState where value = HD.enumP _EmailStateText
+
+type EmailTaskId = Int64
 
 data Body = Body
   { bodyPlain :: T.Text,

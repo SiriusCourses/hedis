@@ -8,72 +8,97 @@ where
 
 import qualified Cheops.Db as Db
 import Cheops.Email.Api
-import Cheops.Email.Content
 import Cheops.Email.Server.Handler.Send
 import qualified Cheops.K8s as K8s
 import Cheops.Logger
 import Cheops.RequestLogger
+import Control.Concurrent.Async
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TVar
 import Control.Exception hiding (Handler)
+import Control.Monad
 import Data.Proxy
 import qualified Data.Vault.Lazy as Vault
 import Network.Wai.Handler.Warp as Wrap
 import Servant
 import Servant.Swagger.UI
-import Sirius.Response
 import System.Environment.Extended
 
 newtype ServerConfig = ServerConfig {serverConfigPort :: Int}
   deriving (Show)
 
 instance FromEnv ServerConfig where
-    fromEnv env = ServerConfig <$> (env .-> "EMAIL_SERVER_PORT")
+  fromEnv env = ServerConfig <$> (env .-> "EMAIL_SERVER_PORT")
 
 data Config = Config
   { loggerConfig :: !LoggerConfig,
     k8sConfig :: !K8s.Config,
     serverConfig :: !ServerConfig,
     dbConfig :: !Db.Config,
-    smtpConfig :: !SmtpConfig
+    smtpConfig :: !SmtpConfig,
+    timeoutConfig :: !TimeoutConfig
   }
 
 type API =
   SwaggerSchemaUI "swagger-ui" "swagger.json"
     :<|> EmailApi
 
-server :: LoggerEnv -> SmtpConfig -> Server API
-server logEnv smtp =
+data EmailAppInfo = EmailAppInfo
+  { emailAppLogger :: LoggerEnv,
+    emailAppDbHandle :: Db.Handle,
+    emailAppNotify :: STM ()
+  }
+
+server :: EmailAppInfo -> Server API
+server appInfo =
   swaggerSchemaUIServer emailSwagger
-    :<|> emailServer logEnv smtp
+    :<|> emailServer appInfo
 
-emailServer :: LoggerEnv -> SmtpConfig -> Server EmailApi
-emailServer logEnv smtp =
-  stateHandle
-    :<|> sendHandle logEnv smtp
-  where
-    stateHandle :: Int -> Handler (Response EmailState)
-    stateHandle _ = pure $ Ok NotYetSent
+emailServer :: EmailAppInfo -> Server EmailApi
+emailServer (EmailAppInfo logEnv db notify) =
+  stateHandle logEnv db
+    :<|> sendHandleAsync logEnv db notify
 
-emailApp :: LoggerEnv -> SmtpConfig -> Application
-emailApp logEnv smtp = serve (Proxy :: Proxy API) (server logEnv smtp)
+emailApp :: EmailAppInfo -> Application
+emailApp appInfo = serve (Proxy :: Proxy API) (server appInfo)
+
+recieverService :: Config -> LoggerEnv -> Db.Handle -> STM () -> IO ()
+recieverService Config {..} logEnv db notify = do
+  let serverPort = serverConfigPort serverConfig
+  logInfo logEnv $ "Running Email Delivery Service on http://localhost:" <> showLS serverPort
+
+  loggerKey <- Vault.newKey
+  userKey <- Vault.newKey
+
+  K8s.run k8sConfig (Db.health db logEnv) $
+    Wrap.run serverPort $
+      loggerMiddleware
+        logEnv
+        loggerKey
+        userKey
+        $ emailApp (EmailAppInfo logEnv db notify)
+
+mkCondVariable :: IO (STM (), STM ())
+mkCondVariable = do
+  ref <- newTVarIO False
+  pure
+    ( writeTVar ref True,
+      readTVar ref >>= guard >> writeTVar ref False
+    )
 
 runEmailService :: Config -> IO ()
-runEmailService Config {..} = do
-  let serverPort = serverConfigPort serverConfig
+runEmailService config@Config {..} = do
   withLogger loggerConfig $ \logEnv -> logSomeException logEnv $ do
-    logInfo logEnv $ "Running Email Delivery Service on http://localhost:" <> showLS serverPort
-
     db <- Db.new dbConfig
 
-    loggerKey <- Vault.newKey
-    userKey <- Vault.newKey
+    (notify, waitCond) <- mkCondVariable
 
-    K8s.run k8sConfig (Db.health db logEnv) $
-      Wrap.run serverPort $
-        loggerMiddleware
-          logEnv
-          loggerKey
-          userKey
-          $ emailApp logEnv smtpConfig
+    let recieverCtx = addNamespace "reciever-worker" logEnv
+    let workerCtx = addNamespace "send-worker" logEnv
+
+    race_
+      (recieverService config recieverCtx db notify)
+      (sendWorker workerCtx db smtpConfig timeoutConfig waitCond)
   where
     logSomeException ctx f =
       try f >>= \case

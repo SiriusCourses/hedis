@@ -8,8 +8,8 @@ import Servant.Swagger
 import Sirius.Response
 
 type EmailApi =
-  "state" :> Capture "stateid" Int :> Get '[JSON] (Response EmailState)
-    :<|> "send" :> ReqBody '[JSON] EmailContent :> Post '[JSON] (Response Int)
+  "state" :> Capture "stateid" EmailTaskId :> Get '[JSON] (Response EmailState)
+    :<|> "send" :> ReqBody '[JSON] EmailContent :> Post '[JSON] (Response EmailTaskId)
 
 emailSwagger :: Swagger
 emailSwagger =
