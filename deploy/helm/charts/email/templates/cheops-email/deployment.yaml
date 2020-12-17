@@ -66,6 +66,10 @@ spec:
              value: {{ .Values.email.smtp.userEmail | quote }}
            - name: SMTP_USER_PASSWORD
              value: {{ .Values.email.smtp.password | quote }}
+           - name: EMAIL_RETRY_TIMEOUT
+             value: "5000000"
+           - name: EMAIL_RETRY_TIMEOUT_ON_ERROR
+             value: "15000000"
       lifecycle:
         preStop:
           httpGet:
