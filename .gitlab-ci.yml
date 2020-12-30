@@ -2,6 +2,7 @@ stages:
   - build
   - push
   - dev
+  - test
 
 before_script:
   - set -e
@@ -112,3 +113,15 @@ cpm email dev:
     name: dev
   only:
     - master
+
+cpm email test:
+  <<: *base-email-cpm-deploy
+  stage: test
+  variables:
+    STAGE_NAME: "TEST"
+    DEPLOY_NAME: "cpm"
+  environment:
+    name: test
+  only:
+    - master
+    - tags
