@@ -34,6 +34,21 @@ push-email-master:
   only:
     - master
 
+push-email-tag:
+  stage: push
+  script:
+    - nix-build nix/release.nix
+    - docker login "${CI_REGISTRY}" -u "${CI_REGISTRY_USER}" -p "${CI_REGISTRY_PASSWORD}"
+    - docker load < ./result
+    - docker tag registry.sirius.online/cheops-edu/cheops-email/cheops-email:latest registry.sirius.online/cheops-edu/cheops-email/cheops-email:${CI_COMMIT_TAG}
+    - docker push registry.sirius.online/cheops-edu/cheops-email/cheops-email:${CI_COMMIT_TAG}
+  tags:
+    - nix
+  except:
+    - schedules
+  only:
+    - tags
+
 .base-email-deploy: &base-email-deploy
   except:
     - schedules

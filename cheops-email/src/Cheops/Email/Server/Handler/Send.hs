@@ -185,12 +185,7 @@ sendWithAuth SmtpConfig {..} content = SMTP.doSMTPSTARTTLS smtpServer $ \conn ->
 
 sendEmail :: Address -> EmailContent -> SMTP.SMTPConnection -> IO ()
 sendEmail sender email@EmailContent {..} conn = do
-  renderedMail <- renderMail' $ toMail sender email
-  SMTP.sendMail from to (B.toStrict renderedMail) conn
-  where
-    from = T.unpack $ addressEmail sender
-    -- Need to explicitly pass all target emails.
-    to = T.unpack . addressEmail <$> (emailTo : (emailCc ++ emailBcc))
+  SMTP.sendMail (toMail sender email) conn
 
 toMail :: Address -> EmailContent -> Mail
 toMail from EmailContent {..} =

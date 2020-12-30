@@ -28,7 +28,7 @@ with { fetch = import ./fetch.nix; };
 
   (self: super:
     {
-      haskellPackages = super.haskellPackages.override {
+      haskellPackages = super.haskell.packages.ghc865.override {
        overrides =
              let packagesFromDirectory =
                    { directory, ... }:
@@ -56,6 +56,7 @@ with { fetch = import ./fetch.nix; };
            prometheus-client-extra = (fetch "prometheus-haskell") + "/prometheus-client-extra";
            prometheus-metrics-ghc  = (fetch "prometheus-haskell") + "/prometheus-metrics-ghc";
            HaskellNet = (fetch "HaskellNet");
+           HaskellNet-SSL = (fetch "HaskellNet-SSL");
            # Packages from cheops project. We should eventually put them to the separate repo or even opensource:
            cheops-db     = (super.cheops-package) + "/backend/cheops-db";
            cheops-lib    = (super.cheops-package) + "/backend/cheops-lib";

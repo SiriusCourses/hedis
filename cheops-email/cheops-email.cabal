@@ -42,7 +42,7 @@ library
     , warp
     , mime-mail
     , vault
-    , HaskellNet
+    , HaskellNet >= 0.6
     , HaskellNet-SSL
     , email-validate
     , async

@@ -1,10 +1,10 @@
 {
   "nixpkgs": {
     "owner": "NixOS",
-    "repo": "nixpkgs-channels",
-    "branch": "nixos-19.09",
-    "rev": "75f4ba05c63be3f147bcc2f7bd4ba1f029cedcb1",
-    "sha256": "157c64220lf825ll4c0cxsdwg7cxqdx4z559fdp7kpz0g6p8fhhr"
+    "repo": "nixpkgs",
+    "branch": "master",
+    "rev": "fb432243c78e9de9dfe1de8fb1846e3ac4652c06",
+    "sha256": "0anvb3q40xjir34kaiq0ak0sybgprjg22v9q5jjvzba370r5nb76"
   },
   "prometheus-haskell": {
     "owner": "qnikst",
@@ -21,10 +21,16 @@
     "sha256": "103pqhn1b5yxyqckvpx3yfhkyfl8mmndknvagrzspl1qz0fjcbvg"
   },
   "HaskellNet": {
-    "owner": "jtdaugherty",
+    "owner": "qnikst",
     "repo": "HaskellNet",
     "branch": "master",
-    "rev": "fbae7bbeff51a36d1bb59bd12fc8b2a23886330a",
-    "sha256": "0pn0wivlz1hscc3fzzrdz7821yqjb4l57pglx3wxz17iz97ysbz1"
+    "rev": "34e3ec8fb2e5071ecff574fc951dbfe356f87bed",
+    "sha256": "sha256:1cyl4hpzg9869b7g4cxlaf8k45g2d5vvcvnjmqx4c1qvfmarlq0y"
+  },
+  "HaskellNet-SSL": {
+    "owner": "dpwright",
+    "repo":"HaskellNet-SSL",
+    "rev": "308af16d76aabc8136746611a037c562c971bb74",
+    "sha256": "sha256:1qzcmmc6j0d8hfsp37pjx9ccvj06slbyxb9616hlgsqri93xajmc"
   }
 }
