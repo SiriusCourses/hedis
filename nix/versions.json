@@ -3,8 +3,8 @@
     "owner": "NixOS",
     "repo": "nixpkgs",
     "branch": "master",
-    "rev": "fb432243c78e9de9dfe1de8fb1846e3ac4652c06",
-    "sha256": "0anvb3q40xjir34kaiq0ak0sybgprjg22v9q5jjvzba370r5nb76"
+    "rev": "d4a76b1f5fb48896a3348c394196e7552e3eb9ef",
+    "sha256": "sha256:1hc6pl2rpzq3xrdp3b0g7gs5llbw2bfsqha720raay624lpsnb82"
   },
   "prometheus-haskell": {
     "owner": "qnikst",
@@ -32,5 +32,26 @@
     "repo":"HaskellNet-SSL",
     "rev": "308af16d76aabc8136746611a037c562c971bb74",
     "sha256": "sha256:1qzcmmc6j0d8hfsp37pjx9ccvj06slbyxb9616hlgsqri93xajmc"
-  }
+  },
+  "cheops-logger": {
+      "owner": "cheopslab",
+      "repo": "cheops-logger",
+      "branch": "master",
+      "rev": "0737ee0235f255b2e8f070740f03ce50d49b42bf",
+      "sha256": "sha256:130c9m8ckq4k8xsx9jscn1xvyzsq4753pk883n6g5wm99lb8fld1"
+  },
+  "thyme": {
+    "owner": "cheopslab",
+    "repo": "thyme",
+    "branch": "hack",
+    "rev": "04f3ae43f00b811a5da34f57b59cfe39e24bdbdb",
+    "sha256": "sha256:0n5n1b06b4j4hqa7jcvp8y0316ixrb94mnz0yv2a81lilnyp6jnh"
+  },
+  "true-name": {
+     "owner": "cheopslab",
+     "repo": "true-name",
+     "branch": "master",
+     "rev": "9fac271538cf32535b8643e5ee8e44c3ef9249d8",
+     "sha256": "sha256:1ka7yazh1wj4ancv4i4fgz09g2chhqkpd37mxpy16d6ijrrajrv4"
+  } 
 }

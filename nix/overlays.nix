@@ -14,8 +14,8 @@ with { fetch = import ./fetch.nix; };
        });
        cheops-package = self.fetchzipSirius {
          name = "archive.zip";
-         url = "https://gitlab.sirius.online/api/v4/projects/12/repository/archive.zip?sha=11e7004421a8b91569af14723a9f4c9fc353d776&s=.zip";
-         sha256 = "sha256:0g8jzisgpxywfam3id5lwzzyjqgpkvi3dcxsyy3wlj8x51xmwgnd";
+         url = "https://gitlab.sirius.online/api/v4/projects/12/repository/archive.zip?sha=3ea3c3f79b50e72df3590e56e23afbea5b722933&s=.zip";
+         sha256 = "sha256:1cscw7m2ylp6mq32hi9z6rq04c2nd97jrbvmi3chh7i5ap9w90y6";
        };
      }
   )
@@ -28,7 +28,7 @@ with { fetch = import ./fetch.nix; };
 
   (self: super:
     {
-      haskellPackages = super.haskell.packages.ghc865.override {
+      haskellPackages = super.haskell.packages.ghc8103.override {
        overrides =
              let packagesFromDirectory =
                    { directory, ... }:
@@ -60,10 +60,12 @@ with { fetch = import ./fetch.nix; };
            # Packages from cheops project. We should eventually put them to the separate repo or even opensource:
            cheops-db     = (super.cheops-package) + "/backend/cheops-db";
            cheops-lib    = (super.cheops-package) + "/backend/cheops-lib";
-           cheops-logger = (super.cheops-package) + "/backend/cheops-logger";
+           cheops-logger = (fetch "cheops-logger") + "/cheops-logger";
            extended-clock = (super.cheops-package) + "/backend/extended-clock";
            naming-conventions = (super.cheops-package) + "/backend/naming-conventions";
            sirius-environment = (super.cheops-package) + "/backend/sirius-environment";
+           thyme = (fetch "thyme");
+           true-name = (fetch "true-name");
        });
   })
 
@@ -72,6 +74,9 @@ with { fetch = import ./fetch.nix; };
       (haskellSelf: haskellSuper: {
          # we can't add don't check in packageSourceOverrides for some reason
          hedis=super.haskell.lib.dontCheck(haskellSuper.hedis);
+         prometheus-client-extra = super.haskell.lib.dontCheck(haskellSuper.prometheus-client-extra);
+         thyme = super.haskell.lib.dontCheck (super.haskell.lib.disableLibraryProfiling ( haskellSuper.thyme )); 
+         cheops-lib = super.haskell.lib.disableLibraryProfiling(haskellSuper.cheops-lib);
       });
   })
 

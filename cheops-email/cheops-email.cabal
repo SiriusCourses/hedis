@@ -24,7 +24,7 @@ library
     Cheops.Email.Server.Handler.Send
     Cheops.Email.Server.Handler.Send.Model
   build-depends:
-    base >=4.11 && <4.14
+    base >=4.11 && <4.15
     , cheops-db
     , cheops-logger
     , aeson
@@ -65,7 +65,7 @@ executable cheops-email
   -- other-modules:
   -- other-extensions:
   build-depends:
-    base >=4.11 && <4.14
+    base >=4.11 && <4.15
     , cheops-email
     , cheops-db
     , cheops-logger

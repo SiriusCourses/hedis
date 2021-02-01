@@ -23,10 +23,30 @@ data EmailError
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance AsError EmailError where
-  asError AuthError = Cheops.Error.Error "Ошибка аутентификации" Nothing
-  asError SendError = Cheops.Error.Error "Ошибка при попытке отправить письмо" Nothing
-  asError InvalidEmailError = Cheops.Error.Error "Некорректный адрес электронной почты" Nothing
-  asError InternalError = Cheops.Error.Error "Внутренняя ошибка сервиса" Nothing
+  asError AuthError = Cheops.Error.Error
+    { errorMessage = "Ошибка аутенфикации"
+    , errorKey = "email.errors.auth_error"
+    , errorMeta = mempty
+    , errorParams = mempty
+    }
+  asError SendError = Cheops.Error.Error
+    { errorMessage = "Ошибка при попытке отправить письмо"
+    , errorKey = "email.errors.mail_send_error"
+    , errorMeta = mempty
+    , errorParams = mempty
+    }
+  asError InvalidEmailError = Cheops.Error.Error
+    { errorMessage = "Некорректный адрес электронной почты"
+    , errorKey = "email.errors.mail_address_error"
+    , errorMeta = mempty
+    , errorParams = mempty
+    }
+  asError InternalError = Cheops.Error.Error
+    { errorMessage = "Внутренняя ошибка сервиса"
+    , errorKey = "email.errors.internal_error"
+    , errorMeta = mempty
+    , errorParams = mempty
+    }
 
 data EmailState
   = EmailStateSent
