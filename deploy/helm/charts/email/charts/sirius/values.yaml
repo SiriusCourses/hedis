@@ -1,3 +1,0 @@
-rts_config:
-  email:
-    _default: -N1 -A16m -qn1 -qb0 -I0 -AL16m

@@ -62,8 +62,8 @@ push-email-tag:
    - export DB_URI="${DEPLOY_NAME}_db_uri"
    - helm upgrade
       --install "email-${CI_ENVIRONMENT_SLUG}" deploy/helm/charts/email/
-      -f "deploy/helm/charts/email/charts/${DEPLOY_NAME}/default.yaml"
-      -f "deploy/helm/charts/email/charts/${DEPLOY_NAME}/${CI_ENVIRONMENT_SLUG}.yaml"
+      -f "deploy/helm/charts/email/conf/${DEPLOY_NAME}/default.yaml"
+      -f "deploy/helm/charts/email/conf/${DEPLOY_NAME}/${CI_ENVIRONMENT_SLUG}.yaml"
       --set global.env="${CI_ENVIRONMENT_SLUG}"
       --set global.tag="${TAG}"
       --set global.url="${CI_ENVIRONMENT_URL}"
@@ -100,6 +100,7 @@ sirius email dev:
      DEPLOY_NAME: "sirius"
   environment:
     name: dev
+  when: on_success
   only:
    - master
 
@@ -111,6 +112,7 @@ cpm email dev:
      DEPLOY_NAME: "cpm"
   environment:
     name: dev
+  when: on_success
   only:
     - master
 
@@ -123,5 +125,4 @@ cpm email test:
   environment:
     name: test
   only:
-    - master
     - tags

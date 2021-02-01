@@ -1,0 +1,19 @@
+email:
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 128Mi
+      cpu: 100m
+  db: 
+    main:
+      poolStripes: 1
+      poolIdleTime: 30
+      poolResourcePerStripe: 10
+  smtp:
+    server: smtp.yandex.ru
+    userName: no-reply@cheops.olimpiada.ru
+  rtsConfig: -N1 -A16m -qn1 -qb0 -I0 -AL16m
+  server:
+    port: 8000
