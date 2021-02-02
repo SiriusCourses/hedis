@@ -130,7 +130,7 @@ cpm email test:
 
 cpm email prod:
   <<: *base-email-cpm-deploy
-  stage: test
+  stage: prod
   variables:
     STAGE_NAME: "PROD"
     DEPLOY_NAME: "cpm"
