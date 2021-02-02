@@ -3,6 +3,7 @@ stages:
   - push
   - dev
   - test
+  - prod
 
 before_script:
   - set -e
