@@ -1,4 +1,0 @@
-email:
-  db: 
-    main:
-      uri: postgres://cheops:this_is_sparta@localhost:5432/cheops

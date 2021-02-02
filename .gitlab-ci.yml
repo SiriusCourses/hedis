@@ -126,3 +126,16 @@ cpm email test:
     name: test
   only:
     - tags
+
+cpm email prod:
+  <<: *base-email-cpm-deploy
+  stage: test
+  variables:
+    STAGE_NAME: "PROD"
+    DEPLOY_NAME: "cpm"
+  environment:
+    name: prod
+  only:
+    - tags
+  tags:
+    - cpm-yac
