@@ -92,17 +92,18 @@ push-email-tag:
   tags:
      - kube-cpm
 
-sirius email dev:
-  <<: *base-email-sirius-deploy
-  stage: dev
-  variables:
-     STAGE_NAME: "DEV"
-     DEPLOY_NAME: "sirius"
-  environment:
-    name: dev
-  when: on_success
-  only:
-   - master
+# Disabled as db is not configured yet
+# sirius email dev:
+#   <<: *base-email-sirius-deploy
+#   stage: dev
+#   variables:
+#      STAGE_NAME: "DEV"
+#      DEPLOY_NAME: "sirius"
+#   environment:
+#     name: dev
+#   when: on_success
+#   only:
+#    - master
 
 cpm email dev:
   <<: *base-email-cpm-deploy
