@@ -2,9 +2,10 @@
 module Tests where
 
 
-
-
-
+#if __GLASSGOW_HASKELL__ < 710
+import Control.Applicative
+import Data.Monoid (mappend)
+#endif
 import qualified Control.Concurrent.Async as Async
 import Control.Exception (try)
 import Control.Concurrent
@@ -19,7 +20,6 @@ import qualified Test.HUnit as HUnit
 import qualified Test.HUnit.Lang as HUnit.Lang
 
 import Database.Redis
-import Data.Either (isRight, isLeft)
 
 ------------------------------------------------------------------------------
 -- helpers
@@ -52,7 +52,6 @@ a <|?> b = do
     resultA <- HUnit.Lang.performTestCase a
     case resultA of
         HUnit.Lang.Success     -> a
-        HUnit.Lang.Failure _ _ -> b
         _                      -> b
 
 assert :: Bool -> Redis ()
