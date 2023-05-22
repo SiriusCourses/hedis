@@ -1,10 +1,10 @@
 {-# LANGUAGE CPP, OverloadedStrings, RecordWildCards, LambdaCase #-}
 module Tests where
 
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-import Data.Monoid (mappend)
-#endif
+
+
+
+
 import qualified Control.Concurrent.Async as Async
 import Control.Exception (try)
 import Control.Concurrent
@@ -16,8 +16,10 @@ import Data.Time.Clock.POSIX
 import qualified Test.Framework as Test (Test)
 import qualified Test.Framework.Providers.HUnit as Test (testCase)
 import qualified Test.HUnit as HUnit
+import qualified Test.HUnit.Lang as HUnit.Lang
 
 import Database.Redis
+import Data.Either (isRight, isLeft)
 
 ------------------------------------------------------------------------------
 -- helpers
@@ -36,11 +38,22 @@ testCase name r conn = Test.testCase name $ do
             putStrLn $ name ++ ": " ++ show deltaT
 
 (>>=?) :: (Eq a, Show a) => Redis (Either Reply a) -> a -> Redis ()
-redis >>=? expected = do
+redis >>=? expected = redis >>@? (HUnit.@=? expected)
+
+(>>@?) :: (Eq a, Show a) => Redis (Either Reply a) -> (a -> HUnit.Assertion) -> Redis ()
+redis >>@? predicate = do
     a <- redis
     liftIO $ case a of
-        Left reply   -> HUnit.assertFailure $ "Redis error: " ++ show reply
-        Right actual -> expected HUnit.@=? actual
+        Left reply -> HUnit.assertFailure $ "Redis error: " ++ show reply
+        Right actual -> predicate actual
+
+(<|?>) :: HUnit.Assertion -> HUnit.Assertion -> HUnit.Assertion
+a <|?> b = do
+    resultA <- HUnit.Lang.performTestCase a
+    case resultA of
+        HUnit.Lang.Success     -> a
+        HUnit.Lang.Failure _ _ -> b
+        _                      -> b
 
 assert :: Bool -> Redis ()
 assert = liftIO . HUnit.assert
@@ -593,6 +606,7 @@ testSlowlog = testCase "slowlog" $ do
     slowlogGet 5 >>=? []
     slowlogLen   >>=? 0
 
+-- Starting with Redis 7.0.0, the DEBUG command is disabled by default and must be enabled manually in the Redis Config file
 testDebugObject :: Test
 testDebugObject = testCase "debugObject/debugSegfault" $ do
     set "key" "value" >>=? Ok
@@ -741,35 +755,49 @@ testXInfo = testCase "xinfo" $ do
     xadd "somestream" "122" [("key2", "value2")]
     xgroupCreate "somestream" "somegroup" "0"
     xreadGroupOpts "somegroup" "consumer1" [("somestream", ">")] (defaultXreadOpts { recordCount = Just 2})
-    consumerInfos <- xinfoConsumers "somestream" "somegroup"
-    liftIO $ case consumerInfos of
-        Left reply -> HUnit.assertFailure $ "Redis error: " ++ show reply
-        Right [XInfoConsumersResponse{..}] -> do
+
+    xinfoConsumers "somestream" "somegroup" >>@? (\case
+        [XInfoConsumersResponse{..}] -> do
             xinfoConsumerName HUnit.@=? "consumer1"
             xinfoConsumerNumPendingMessages HUnit.@=? 2
-        Right bad -> HUnit.assertFailure $ "Unexpectedly got " ++ show bad
-    xinfoGroups "somestream" >>=? [
-        XInfoGroupsResponse{
-            xinfoGroupsGroupName = "somegroup",
-            xinfoGroupsNumConsumers = 1,
-            xinfoGroupsNumPendingMessages = 2,
-            xinfoGroupsLastDeliveredMessageId = "122-0"
-        }]
-    xinfoStream "somestream" >>=? XInfoStreamResponse
-        { xinfoStreamLength = 2
-        , xinfoStreamRadixTreeKeys = 1
-        , xinfoStreamRadixTreeNodes = 2
-        , xinfoStreamNumGroups = 1
-        , xinfoStreamLastEntryId = "122-0"
-        , xinfoStreamFirstEntry = StreamsRecord
-            { recordId = "121-0"
-            , keyValues = [("key1", "value1")]
-            }
-        , xinfoStreamLastEntry = StreamsRecord
-            { recordId = "122-0"
-            , keyValues = [("key2", "value2")]
-            }
-        }
+
+        bad -> HUnit.assertFailure $ "Unexpectedly got " ++ show bad)
+
+    xinfoGroups "somestream" >>@? (\case
+        [XInfoGroupsResponse{..}] -> do
+            xinfoGroupsGroupName              HUnit.@=? "somegroup"
+            xinfoGroupsNumConsumers           HUnit.@=? 1
+            xinfoGroupsNumPendingMessages     HUnit.@=? 2
+            xinfoGroupsLastDeliveredMessageId HUnit.@=? "122-0"
+
+            (do xinfoGroupsEntriesRead          HUnit.@=? Nothing -- Redis 6
+                xinfoGroupsLag                  HUnit.@=? Nothing) <|?>
+                (do xinfoGroupsEntriesRead          HUnit.@=? Just 2 -- Redis 7
+                    xinfoGroupsLag                  HUnit.@=? Just 0)
+
+        bad -> HUnit.assertFailure $ "Unexpectedly got " ++ show bad)
+
+
+    xinfoStream "somestream" >>@? (\case
+        XInfoStreamResponse{..} -> do
+            xinfoStreamLength         HUnit.@=? 2
+            xinfoStreamRadixTreeKeys  HUnit.@=? 1
+            xinfoStreamRadixTreeNodes HUnit.@=? 2
+            xinfoStreamNumGroups      HUnit.@=? 1
+            xinfoStreamLastEntryId    HUnit.@=? "122-0"
+            xinfoStreamFirstEntry     HUnit.@=? StreamsRecord {
+                                                      recordId = "121-0"
+                                                    , keyValues = [("key1", "value1")]}
+            xinfoStreamLastEntry      HUnit.@=? StreamsRecord {
+                                                      recordId = "122-0"
+                                                    , keyValues = [("key2", "value2")] }
+            (do xinfoMaxDeletedEntryId    HUnit.@=? Nothing -- Redis 6.0
+                xinfoEntriesAdded         HUnit.@=? Nothing
+                xinfoRecordedFirstEntryId HUnit.@=? Nothing) <|?> -- Redis 7.0
+                (do xinfoMaxDeletedEntryId    HUnit.@=? Just "0-0"
+                    xinfoEntriesAdded         HUnit.@=? Just 2
+                    xinfoRecordedFirstEntryId HUnit.@=? Just "121-0")
+        bad -> HUnit.assertFailure $ "Unexpectedly got " ++ show bad)
 
 testXDel ::Test
 testXDel = testCase "xdel" $ do
@@ -786,3 +814,4 @@ testXTrim = testCase "xtrim" $ do
     xadd "somestream" "124" [("key4", "value4")]
     xadd "somestream" "125" [("key5", "value5")]
     xtrim "somestream" (Maxlen 2) >>=? 3
+

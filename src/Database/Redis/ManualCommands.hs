@@ -14,6 +14,7 @@ import Database.Redis.Core
 import Database.Redis.Protocol
 import Database.Redis.Types
 import qualified Database.Redis.Cluster.Command as CMD
+import Network.TLS (Bytes)
 
 
 objectRefcount
@@ -1114,17 +1115,30 @@ data XInfoConsumersResponse = XInfoConsumersResponse
     { xinfoConsumerName :: ByteString
     , xinfoConsumerNumPendingMessages :: Integer
     , xinfoConsumerIdleTime :: Integer
+    , xinfoConsumerInactive :: Maybe Integer -- since redis 7.0
     } deriving (Show, Eq)
 
 instance RedisResult XInfoConsumersResponse where
-    decode (MultiBulk (Just [
-        Bulk (Just "name"),
-        Bulk (Just xinfoConsumerName),
-        Bulk (Just "pending"),
-        Integer xinfoConsumerNumPendingMessages,
-        Bulk (Just "idle"),
-        Integer xinfoConsumerIdleTime])) = Right XInfoConsumersResponse{..}
-    decode a = Left a
+    decode = decodeRedis6 <> decodeRedis7
+      where decodeRedis6 (MultiBulk (Just [
+                Bulk (Just "name"),
+                Bulk (Just xinfoConsumerName),
+                Bulk (Just "pending"),
+                Integer xinfoConsumerNumPendingMessages,
+                Bulk (Just "idle"),
+                Integer xinfoConsumerIdleTime])) = Right XInfoConsumersResponse{xinfoConsumerInactive = Nothing, ..}
+            decodeRedis6 a = Left a
+
+            decodeRedis7 (MultiBulk (Just [
+                Bulk (Just "name"),
+                Bulk (Just xinfoConsumerName),
+                Bulk (Just "pending"),
+                Integer xinfoConsumerNumPendingMessages,
+                Bulk (Just "idle"),
+                Integer xinfoConsumerIdleTime,
+                Bulk (Just "inactive"),
+                Integer xinfoConsumerInactive])) = Right XInfoConsumersResponse{xinfoConsumerInactive = Just xinfoConsumerInactive, ..}
+            decodeRedis7 a = Left a
 
 xinfoConsumers
     :: (RedisCtx m f)
@@ -1138,15 +1152,36 @@ data XInfoGroupsResponse = XInfoGroupsResponse
     , xinfoGroupsNumConsumers :: Integer
     , xinfoGroupsNumPendingMessages :: Integer
     , xinfoGroupsLastDeliveredMessageId :: ByteString
+    , xinfoGroupsEntriesRead :: Maybe Integer
+    , xinfoGroupsLag :: Maybe Integer
     } deriving (Show, Eq)
 
 instance RedisResult XInfoGroupsResponse where
-    decode (MultiBulk (Just [
-        Bulk (Just "name"),Bulk (Just xinfoGroupsGroupName),
-        Bulk (Just "consumers"),Integer xinfoGroupsNumConsumers,
-        Bulk (Just "pending"),Integer xinfoGroupsNumPendingMessages,
-        Bulk (Just "last-delivered-id"),Bulk (Just xinfoGroupsLastDeliveredMessageId)])) = Right XInfoGroupsResponse{..}
-    decode a = Left a
+    decode = decodeRedis6 <> decodeRedis7
+      where decodeRedis6 (MultiBulk (Just [
+              Bulk (Just "name"),      Bulk (Just xinfoGroupsGroupName),
+              Bulk (Just "consumers"), Integer xinfoGroupsNumConsumers,
+              Bulk (Just "pending"),   Integer xinfoGroupsNumPendingMessages,
+              Bulk (Just "last-delivered-id"),
+              Bulk (Just xinfoGroupsLastDeliveredMessageId)])) = 
+                Right XInfoGroupsResponse{
+                      xinfoGroupsEntriesRead = Nothing
+                    , xinfoGroupsLag         = Nothing
+                    , ..}
+            decodeRedis6 a = Left a
+
+            decodeRedis7 (MultiBulk (Just [
+              Bulk (Just "name"),              Bulk (Just xinfoGroupsGroupName),
+              Bulk (Just "consumers"),         Integer xinfoGroupsNumConsumers,
+              Bulk (Just "pending"),           Integer xinfoGroupsNumPendingMessages,
+              Bulk (Just "last-delivered-id"), Bulk (Just xinfoGroupsLastDeliveredMessageId),
+              Bulk (Just "entries-read"),      Integer xinfoGroupsEntriesRead,
+              Bulk (Just "lag"),               Integer xinfoGroupsLag])) = 
+                Right XInfoGroupsResponse{     
+                      xinfoGroupsEntriesRead = Just xinfoGroupsEntriesRead
+                    , xinfoGroupsLag         = Just xinfoGroupsLag
+                    , ..}
+            decodeRedis7 a = Left a
 
 xinfoGroups
     :: (RedisCtx m f)
@@ -1159,6 +1194,9 @@ data XInfoStreamResponse
     { xinfoStreamLength :: Integer
     , xinfoStreamRadixTreeKeys :: Integer
     , xinfoStreamRadixTreeNodes :: Integer
+    , xinfoMaxDeletedEntryId :: Maybe ByteString -- since redis 7.0
+    , xinfoEntriesAdded :: Maybe Integer -- since redis 7.0
+    , xinfoRecordedFirstEntryId :: Maybe ByteString -- since redis 7.0
     , xinfoStreamNumGroups :: Integer
     , xinfoStreamLastEntryId :: ByteString
     , xinfoStreamFirstEntry :: StreamsRecord
@@ -1168,57 +1206,113 @@ data XInfoStreamResponse
     { xinfoStreamLength :: Integer
     , xinfoStreamRadixTreeKeys :: Integer
     , xinfoStreamRadixTreeNodes :: Integer
+    , xinfoMaxDeletedEntryId :: Maybe ByteString -- since redis 7.0
+    , xinfoEntriesAdded :: Maybe Integer -- since redis 7.0
+    , xinfoRecordedFirstEntryId :: Maybe ByteString -- since redis 7.0
     , xinfoStreamNumGroups :: Integer
     , xinfoStreamLastEntryId :: ByteString
     }
     deriving (Show, Eq)
 
 instance RedisResult XInfoStreamResponse where
-    decode = decodeRedis5 <> decodeRedis6
+    decode = decodeRedis5 <> decodeRedis6 <> decodeRedis7
         where
             decodeRedis5 (MultiBulk (Just [
-                 Bulk (Just "length"),Integer xinfoStreamLength,
-                 Bulk (Just "radix-tree-keys"),Integer xinfoStreamRadixTreeKeys,
-                 Bulk (Just "radix-tree-nodes"),Integer xinfoStreamRadixTreeNodes,
-                 Bulk (Just "groups"),Integer xinfoStreamNumGroups,
-                 Bulk (Just "last-generated-id"),Bulk (Just xinfoStreamLastEntryId),
-                 Bulk (Just "first-entry"), Bulk Nothing ,
-                 Bulk (Just "last-entry"), Bulk Nothing ])) = do
-                     return XInfoStreamEmptyResponse{..}
+                 Bulk (Just "length"),            Integer xinfoStreamLength,
+                 Bulk (Just "radix-tree-keys"),   Integer xinfoStreamRadixTreeKeys,
+                 Bulk (Just "radix-tree-nodes"),  Integer xinfoStreamRadixTreeNodes,
+                 Bulk (Just "groups"),            Integer xinfoStreamNumGroups,
+                 Bulk (Just "last-generated-id"), Bulk (Just xinfoStreamLastEntryId),
+                 Bulk (Just "first-entry"),       Bulk Nothing ,
+                 Bulk (Just "last-entry"),        Bulk Nothing ])) = do
+                    return XInfoStreamEmptyResponse{
+                          xinfoMaxDeletedEntryId    = Nothing
+                        , xinfoEntriesAdded         = Nothing
+                        , xinfoRecordedFirstEntryId = Nothing
+                        , ..}
             decodeRedis5 (MultiBulk (Just [
-                Bulk (Just "length"),Integer xinfoStreamLength,
-                Bulk (Just "radix-tree-keys"),Integer xinfoStreamRadixTreeKeys,
-                Bulk (Just "radix-tree-nodes"),Integer xinfoStreamRadixTreeNodes,
-                Bulk (Just "groups"),Integer xinfoStreamNumGroups,
-                Bulk (Just "last-generated-id"),Bulk (Just xinfoStreamLastEntryId),
-                Bulk (Just "first-entry"), rawFirstEntry ,
-                Bulk (Just "last-entry"), rawLastEntry ])) = do
+                Bulk (Just "length"),            Integer xinfoStreamLength,
+                Bulk (Just "radix-tree-keys"),   Integer xinfoStreamRadixTreeKeys,
+                Bulk (Just "radix-tree-nodes"),  Integer xinfoStreamRadixTreeNodes,
+                Bulk (Just "groups"),            Integer xinfoStreamNumGroups,
+                Bulk (Just "last-generated-id"), Bulk (Just xinfoStreamLastEntryId),
+                Bulk (Just "first-entry"),       rawFirstEntry ,
+                Bulk (Just "last-entry"),        rawLastEntry ])) = do
                     xinfoStreamFirstEntry <- decode rawFirstEntry
-                    xinfoStreamLastEntry <- decode rawLastEntry
-                    return XInfoStreamResponse{..}
+                    xinfoStreamLastEntry  <- decode rawLastEntry
+                    return XInfoStreamResponse{
+                          xinfoMaxDeletedEntryId    = Nothing
+                        , xinfoEntriesAdded         = Nothing
+                        , xinfoRecordedFirstEntryId = Nothing
+                        , ..}
             decodeRedis5 a = Left a
 
             decodeRedis6 (MultiBulk (Just [
-                Bulk (Just "length"),Integer xinfoStreamLength,
-                Bulk (Just "radix-tree-keys"),Integer xinfoStreamRadixTreeKeys,
-                Bulk (Just "radix-tree-nodes"),Integer xinfoStreamRadixTreeNodes,
-                Bulk (Just "last-generated-id"),Bulk (Just xinfoStreamLastEntryId),
-                Bulk (Just "groups"),Integer xinfoStreamNumGroups,
-                Bulk (Just "first-entry"), Bulk Nothing ,
-                Bulk (Just "last-entry"), Bulk Nothing ])) = do
-                    return XInfoStreamEmptyResponse{..}
+                Bulk (Just "length"),            Integer xinfoStreamLength,
+                Bulk (Just "radix-tree-keys"),   Integer xinfoStreamRadixTreeKeys,
+                Bulk (Just "radix-tree-nodes"),  Integer xinfoStreamRadixTreeNodes,
+                Bulk (Just "last-generated-id"), Bulk (Just xinfoStreamLastEntryId),
+                Bulk (Just "groups"),            Integer xinfoStreamNumGroups,
+                Bulk (Just "first-entry"),       Bulk Nothing ,
+                Bulk (Just "last-entry"),        Bulk Nothing ])) = do
+                    return XInfoStreamEmptyResponse{
+                          xinfoMaxDeletedEntryId    = Nothing
+                        , xinfoEntriesAdded         = Nothing
+                        , xinfoRecordedFirstEntryId = Nothing
+                        , ..}
             decodeRedis6 (MultiBulk (Just [
-                Bulk (Just "length"),Integer xinfoStreamLength,
-                Bulk (Just "radix-tree-keys"),Integer xinfoStreamRadixTreeKeys,
-                Bulk (Just "radix-tree-nodes"),Integer xinfoStreamRadixTreeNodes,
-                Bulk (Just "last-generated-id"),Bulk (Just xinfoStreamLastEntryId),
-                Bulk (Just "groups"),Integer xinfoStreamNumGroups,
-                Bulk (Just "first-entry"), rawFirstEntry ,
-                Bulk (Just "last-entry"), rawLastEntry ])) = do
+                Bulk (Just "length"),            Integer xinfoStreamLength,
+                Bulk (Just "radix-tree-keys"),   Integer xinfoStreamRadixTreeKeys,
+                Bulk (Just "radix-tree-nodes"),  Integer xinfoStreamRadixTreeNodes,
+                Bulk (Just "last-generated-id"), Bulk (Just xinfoStreamLastEntryId),
+                Bulk (Just "groups"),            Integer xinfoStreamNumGroups,
+                Bulk (Just "first-entry"),       rawFirstEntry ,
+                Bulk (Just "last-entry"),        rawLastEntry ])) = do
                     xinfoStreamFirstEntry <- decode rawFirstEntry
-                    xinfoStreamLastEntry <- decode rawLastEntry
-                    return XInfoStreamResponse{..}
+                    xinfoStreamLastEntry  <- decode rawLastEntry
+                    return XInfoStreamResponse{
+                          xinfoMaxDeletedEntryId    = Nothing
+                        , xinfoEntriesAdded         = Nothing
+                        , xinfoRecordedFirstEntryId = Nothing
+                        , ..}
             decodeRedis6 a = Left a
+
+            decodeRedis7 (MultiBulk (Just [
+                Bulk (Just "length"),                  Integer xinfoStreamLength,
+                Bulk (Just "radix-tree-keys"),         Integer xinfoStreamRadixTreeKeys,
+                Bulk (Just "radix-tree-nodes"),        Integer xinfoStreamRadixTreeNodes,
+                Bulk (Just "last-generated-id"),       Bulk (Just xinfoStreamLastEntryId),
+                Bulk (Just "max-deleted-entry-id"),    Bulk (Just xinfoMaxDeletedEntryId),
+                Bulk (Just "entries-added"),           Integer xinfoEntriesAdded,
+                Bulk (Just "recorded-first-entry-id"), Bulk (Just xinfoRecordedFirstEntryId),
+                Bulk (Just "groups"),                  Integer xinfoStreamNumGroups,
+                Bulk (Just "first-entry"),             Bulk Nothing ,
+                Bulk (Just "last-entry"),              Bulk Nothing ])) = do
+                    return XInfoStreamEmptyResponse{
+                          xinfoMaxDeletedEntryId    = Just xinfoMaxDeletedEntryId
+                        , xinfoEntriesAdded         = Just xinfoEntriesAdded
+                        , xinfoRecordedFirstEntryId = Just xinfoRecordedFirstEntryId
+                        , ..}
+
+            decodeRedis7 (MultiBulk (Just [
+                Bulk (Just "length"),                  Integer xinfoStreamLength,
+                Bulk (Just "radix-tree-keys"),         Integer xinfoStreamRadixTreeKeys,
+                Bulk (Just "radix-tree-nodes"),        Integer xinfoStreamRadixTreeNodes,
+                Bulk (Just "last-generated-id"),       Bulk (Just xinfoStreamLastEntryId),
+                Bulk (Just "max-deleted-entry-id"),    Bulk (Just xinfoMaxDeletedEntryId),
+                Bulk (Just "entries-added"),           Integer xinfoEntriesAdded,
+                Bulk (Just "recorded-first-entry-id"), Bulk (Just xinfoRecordedFirstEntryId),
+                Bulk (Just "groups"),                  Integer xinfoStreamNumGroups,
+                Bulk (Just "first-entry"),          rawFirstEntry ,
+                Bulk (Just "last-entry"),           rawLastEntry ])) = do
+                    xinfoStreamFirstEntry <- decode rawFirstEntry
+                    xinfoStreamLastEntry  <- decode rawLastEntry
+                    return XInfoStreamResponse{
+                          xinfoMaxDeletedEntryId    = Just xinfoMaxDeletedEntryId
+                        , xinfoEntriesAdded         = Just xinfoEntriesAdded
+                        , xinfoRecordedFirstEntryId = Just xinfoRecordedFirstEntryId
+                        , ..}
+            decodeRedis7 a = Left a
 
 xinfoStream
     :: (RedisCtx m f)
