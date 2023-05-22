@@ -14,7 +14,6 @@ import Database.Redis.Core
 import Database.Redis.Protocol
 import Database.Redis.Types
 import qualified Database.Redis.Cluster.Command as CMD
-import Network.TLS (Bytes)
 
 
 objectRefcount
