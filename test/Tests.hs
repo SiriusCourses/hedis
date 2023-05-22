@@ -51,8 +51,17 @@ redis >>@? predicate = do
 a <|?> b = do
     resultA <- HUnit.Lang.performTestCase a
     case resultA of
-        HUnit.Lang.Success     -> a
-        _                      -> b
+        HUnit.Lang.Success        -> a
+        HUnit.Lang.Failure _ errA -> tryB errA
+        HUnit.Lang.Error   _ errA -> tryB errA
+        where tryB errA = do
+                        resultB <- HUnit.Lang.performTestCase b
+                        case resultB of 
+                            HUnit.Lang.Success        -> b
+                            HUnit.Lang.Failure _ errB -> concatErrors errA errB
+                            HUnit.Lang.Error   _ errB -> concatErrors errA errB
+              concatErrors errA errB = HUnit.Lang.assertFailure ("{" ++ errA ++ "\nOR\n" ++ errB ++ "\n}: Failed")
+               
 
 assert :: Bool -> Redis ()
 assert = liftIO . HUnit.assert
