@@ -1111,10 +1111,14 @@ xclaimJustIds stream group consumer minIdleTime opts messageIds = sendRequest $
     (xclaimRequest stream group consumer minIdleTime opts messageIds) ++ ["JUSTID"]
 
 data XInfoConsumersResponse = XInfoConsumersResponse
-    { xinfoConsumerName :: ByteString
-    , xinfoConsumerNumPendingMessages :: Integer
-    , xinfoConsumerIdleTime :: Integer
-    , xinfoConsumerInactive :: Maybe Integer -- since redis 7.0
+    { xinfoConsumerName :: ByteString -- ^ the consumer's name
+    , xinfoConsumerNumPendingMessages :: Integer -- ^ the number of entries in the PEL: pending messages for the consumer, which are messages that were delivered but are yet to be acknowledged
+    , xinfoConsumerIdleTime :: Integer -- ^ the number of milliseconds that have passed since the consumer's last attempted interaction (Examples: XREADGROUP, XCLAIM, XAUTOCLAIM)
+    , xinfoConsumerInactive :: Maybe Integer 
+    {- | the number of milliseconds that have passed since the consumer's last successful interaction (Examples: XREADGROUP that actually read some entries into the PEL, XCLAIM/XAUTOCLAIM that actually claimed some entries)
+    
+    @since redis 7.0
+    -}
     } deriving (Show, Eq)
 
 instance RedisResult XInfoConsumersResponse where
@@ -1147,12 +1151,20 @@ xinfoConsumers
 xinfoConsumers stream group = sendRequest $ ["XINFO", "CONSUMERS", stream, group]
 
 data XInfoGroupsResponse = XInfoGroupsResponse
-    { xinfoGroupsGroupName :: ByteString
-    , xinfoGroupsNumConsumers :: Integer
-    , xinfoGroupsNumPendingMessages :: Integer
-    , xinfoGroupsLastDeliveredMessageId :: ByteString
+    { xinfoGroupsGroupName :: ByteString -- ^ the consumer group's name
+    , xinfoGroupsNumConsumers :: Integer -- ^ the number of consumers in the group
+    , xinfoGroupsNumPendingMessages :: Integer -- ^ the length of the group's pending entries list (PEL), which are messages that were delivered but are yet to be acknowledged
+    , xinfoGroupsLastDeliveredMessageId :: ByteString -- ^ the ID of the last entry delivered the group's consumers
     , xinfoGroupsEntriesRead :: Maybe Integer
+    {- ^ the logical "read counter" of the last entry delivered to group's consumers
+    
+    @since Redis 7.0
+    -}
     , xinfoGroupsLag :: Maybe Integer
+    {- ^ the number of entries in the stream that are still waiting to be delivered to the group's consumers, or a Nothing when that number can't be determined.
+    
+    @since Redis 7.0
+    -}
     } deriving (Show, Eq)
 
 instance RedisResult XInfoGroupsResponse where
@@ -1190,26 +1202,50 @@ xinfoGroups stream = sendRequest ["XINFO", "GROUPS", stream]
 
 data XInfoStreamResponse 
     = XInfoStreamResponse
-    { xinfoStreamLength :: Integer
-    , xinfoStreamRadixTreeKeys :: Integer
-    , xinfoStreamRadixTreeNodes :: Integer
-    , xinfoMaxDeletedEntryId :: Maybe ByteString -- since redis 7.0
-    , xinfoEntriesAdded :: Maybe Integer -- since redis 7.0
-    , xinfoRecordedFirstEntryId :: Maybe ByteString -- since redis 7.0
-    , xinfoStreamNumGroups :: Integer
-    , xinfoStreamLastEntryId :: ByteString
-    , xinfoStreamFirstEntry :: StreamsRecord
-    , xinfoStreamLastEntry :: StreamsRecord
+    { xinfoStreamLength :: Integer -- ^ the number of entries in the stream 
+    , xinfoStreamRadixTreeKeys :: Integer -- ^ the number of keys in the underlying radix data structure
+    , xinfoStreamRadixTreeNodes :: Integer -- ^ the number of nodes in the underlying radix data structure
+    , xinfoMaxDeletedEntryId :: Maybe ByteString
+    {- ^ the maximal entry ID that was deleted from the stream
+    
+    @since Redis 7.0
+    -}
+    , xinfoEntriesAdded :: Maybe Integer 
+    {- ^ the count of all entries added to the stream during its lifetime
+    
+    @since Redis 7.0
+    -}
+    , xinfoRecordedFirstEntryId :: Maybe ByteString 
+    {- ^ id of first recorded entry 
+    
+    @since Redis 7.0
+    -}
+    , xinfoStreamNumGroups :: Integer -- ^ the number of consumer groups defined for the stream
+    , xinfoStreamLastEntryId :: ByteString -- ^ id of the last entry in the stream
+    , xinfoStreamFirstEntry :: StreamsRecord -- ^ id and field-value tuples of the first entry in the stream
+    , xinfoStreamLastEntry :: StreamsRecord -- ^ id and field-value tuples of the last entry in the stream
     } 
     | XInfoStreamEmptyResponse
-    { xinfoStreamLength :: Integer
-    , xinfoStreamRadixTreeKeys :: Integer
-    , xinfoStreamRadixTreeNodes :: Integer
-    , xinfoMaxDeletedEntryId :: Maybe ByteString -- since redis 7.0
-    , xinfoEntriesAdded :: Maybe Integer -- since redis 7.0
-    , xinfoRecordedFirstEntryId :: Maybe ByteString -- since redis 7.0
-    , xinfoStreamNumGroups :: Integer
-    , xinfoStreamLastEntryId :: ByteString
+    { xinfoStreamLength :: Integer -- ^ the number of entries in the stream 
+    , xinfoStreamRadixTreeKeys :: Integer -- ^ the number of keys in the underlying radix data structure
+    , xinfoStreamRadixTreeNodes :: Integer -- ^ the number of nodes in the underlying radix data structure
+    , xinfoMaxDeletedEntryId :: Maybe ByteString 
+    {- ^ the maximal entry ID that was deleted from the stream
+    
+    @since Redis 7.0
+    -}
+    , xinfoEntriesAdded :: Maybe Integer
+    {- ^ the count of all entries added to the stream during its lifetime
+    
+    @since Redis 7.0
+    -}
+    , xinfoRecordedFirstEntryId :: Maybe ByteString
+    {- ^ id of first recorded entry
+    
+    @since Redis 7.0
+    -}
+    , xinfoStreamNumGroups :: Integer -- ^ the number of consumer groups defined for the stream
+    , xinfoStreamLastEntryId :: ByteString -- ^ the ID of the last entry in the stream
     }
     deriving (Show, Eq)
 
