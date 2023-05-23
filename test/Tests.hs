@@ -614,7 +614,7 @@ testSlowlog = testCase "slowlog" $ do
     slowlogGet 5 >>=? []
     slowlogLen   >>=? 0
 
--- Starting with Redis 7.0.0, the DEBUG command is disabled by default and must be enabled manually in the Redis Config file
+-- |Starting with Redis 7.0.0, the DEBUG command is disabled by default and must be enabled manually in the Redis Config file
 testDebugObject :: Test
 testDebugObject = testCase "debugObject/debugSegfault" $ do
     set "key" "value" >>=? Ok
