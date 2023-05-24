@@ -38,7 +38,7 @@ testCase name r conn = Test.testCase name $ do
             putStrLn $ name ++ ": " ++ show deltaT
 
 (>>=?) :: (Eq a, Show a) => Redis (Either Reply a) -> a -> Redis ()
-redis >>=? expected = redis >>@? (HUnit.@=? expected)
+redis >>=? expected = redis >>@? (expected HUnit.@=?)
 
 (>>@?) :: (Eq a, Show a) => Redis (Either Reply a) -> (a -> HUnit.Assertion) -> Redis ()
 redis >>@? predicate = do

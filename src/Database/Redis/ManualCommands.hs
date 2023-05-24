@@ -1115,7 +1115,7 @@ data XInfoConsumersResponse = XInfoConsumersResponse
     , xinfoConsumerNumPendingMessages :: Integer -- ^ the number of entries in the PEL: pending messages for the consumer, which are messages that were delivered but are yet to be acknowledged
     , xinfoConsumerIdleTime :: Integer -- ^ the number of milliseconds that have passed since the consumer's last attempted interaction (Examples: XREADGROUP, XCLAIM, XAUTOCLAIM)
     , xinfoConsumerInactive :: Maybe Integer 
-    {- | the number of milliseconds that have passed since the consumer's last successful interaction (Examples: XREADGROUP that actually read some entries into the PEL, XCLAIM/XAUTOCLAIM that actually claimed some entries)
+    {- ^ the number of milliseconds that have passed since the consumer's last successful interaction (Examples: XREADGROUP that actually read some entries into the PEL, XCLAIM/XAUTOCLAIM that actually claimed some entries)
     
     @since redis 7.0
     -}
