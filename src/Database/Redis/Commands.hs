@@ -247,7 +247,7 @@ XGroupCreateOpts(..),
 xgroupCreateConsumer, -- |Create consumer. The redis command @XGROUP@ is split up into 'xgroupCreate', 'xgroupCreateOpts', 'xgroupCreateConsumer', 'xgroupSetId', 'sgroupSetIdOpts', 'xgroupDestroy', and 'xgroupDelConsumer'. Since Redis 5.0.0
 defaultXGroupCreateOpts,
 xgroupSetId, -- |Set the id for a consumer group. The redis command @XGROUP@ is split up into 'xgroupCreate', 'xgroupCreateOpts', 'xgroupSetId', 'xgroupCreateConsumer', 'sgroupSetIdOpts', 'xgroupDestroy', and 'xgroupDelConsumer'. Since Redis 5.0.0
-xgroupSetIdOpts,
+xgroupSetIdOpts, -- |Set the id for a consumer group. The redis command @XGROUP@ is split up into 'xgroupCreate', 'xgroupCreateOpts', 'xgroupSetId', 'xgroupCreateConsumer', 'sgroupSetIdOpts', 'xgroupDestroy', and 'xgroupDelConsumer'. Since Redis 7.0.0
 XGroupSetIdOpts(..),
 defaultXGroupSetIdOpts,
 xgroupDestroy, -- |Destroy a consumer group. The redis command @XGROUP@ is split up into 'xgroupCreate', 'xgroupCreateOpts', 'xgroupCreateConsumer', 'xgroupSetId', 'sgroupSetIdOpts', 'xgroupDestroy', and 'xgroupDelConsumer'. Since Redis 5.0.0
