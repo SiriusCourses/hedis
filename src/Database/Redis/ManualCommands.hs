@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP, OverloadedStrings, RecordWildCards, FlexibleContexts #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Database.Redis.ManualCommands where
 
@@ -7,9 +8,9 @@ import Data.ByteString (ByteString, empty, append)
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString as BS
 import Data.Maybe (maybeToList, catMaybes)
-#if __GLASGOW_HASKELL__ < 808
-import Data.Semigroup ((<>))
-#endif
+
+
+
 
 import Database.Redis.Core
 import Database.Redis.Protocol
@@ -507,7 +508,10 @@ set
 set key value = sendRequest ["SET", key, value]
 
 
-data Condition = Nx | Xx deriving (Show, Eq)
+data Condition = 
+  Nx | -- ^ Only set the key if it does not already exist.
+  Xx   -- ^ Only set the key if it already exists.
+   deriving (Show, Eq)
 
 
 instance RedisArg Condition where
@@ -516,11 +520,33 @@ instance RedisArg Condition where
 
 
 data SetOpts = SetOpts
-  { setSeconds      :: Maybe Integer
-  , setMilliseconds :: Maybe Integer
-  , setCondition    :: Maybe Condition
+  { setSeconds           :: Maybe Integer -- ^ Set the specified expire time, in seconds.
+  , setMilliseconds      :: Maybe Integer -- ^ Set the specified expire time, in milliseconds.
+  , setUnixSeconds       :: Maybe Integer 
+  {- ^ Set the specified Unix time at which the key will expire, in seconds.
+
+  @since Redis 6.2
+  -}
+  , setUnixMilliseconds  :: Maybe Integer
+  {- ^ Set the specified Unix time at which the key will expire, in milliseconds.
+  -}
+  , setCondition         :: Maybe Condition -- ^ Set the key on condition
+  , setKeepTTL           :: Bool
+  {- ^ Retain the time to live associated with the key.
+
+  @since Redis 6.0
+  -}
   } deriving (Show, Eq)
 
+internalSetOptsToArgs :: SetOpts -> [ByteString]
+internalSetOptsToArgs SetOpts{..} = concat [ex, px, exat, pxat, keepttl, condition]
+  where
+    ex   = maybe [] (\s -> ["EX",   encode s]) setSeconds
+    px   = maybe [] (\s -> ["PX",   encode s]) setMilliseconds
+    exat = maybe [] (\s -> ["EXAT", encode s]) setUnixSeconds
+    pxat = maybe [] (\s -> ["PXAT", encode s]) setUnixMilliseconds
+    keepttl = ["KEEPTTL" | setKeepTTL]
+    condition = map encode $ maybeToList setCondition
 
 setOpts
     :: (RedisCtx m f)
@@ -528,12 +554,22 @@ setOpts
     -> ByteString -- ^ value
     -> SetOpts
     -> m (f Status)
-setOpts key value SetOpts{..} =
-    sendRequest $ concat [["SET", key, value], ex, px, condition]
-  where
-    ex = maybe [] (\s -> ["EX", encode s]) setSeconds
-    px = maybe [] (\s -> ["PX", encode s]) setMilliseconds
-    condition = map encode $ maybeToList setCondition
+setOpts key value opts = sendRequest $ ["SET", key, value] ++ internalSetOptsToArgs opts
+
+setGet
+    :: (RedisCtx m f)
+    => ByteString -- ^ key
+    -> ByteString -- ^ value
+    -> m (f ByteString)
+setGet key value = sendRequest ["SET", key, value, "GET"]
+
+setGetOpts
+    :: (RedisCtx m f)
+    => ByteString -- ^ key
+    -> ByteString -- ^ value
+    -> SetOpts
+    -> m (f ByteString)
+setGetOpts key value opts = sendRequest $ ["SET", key, value, "GET"] ++ internalSetOptsToArgs opts
 
 
 data DebugMode = Yes | Sync | No deriving (Show, Eq)
@@ -562,10 +598,23 @@ zadd key scoreMembers =
   zaddOpts key scoreMembers defaultZaddOpts
 
 
+data SizeCondition = 
+    CGT | -- ^  Only update existing elements if the new score is greater than the current score. This flag doesn't prevent adding new elements.
+    CLT   -- ^  Only update existing elements if the new score is less than the current score. This flag doesn't prevent adding new elements.
+    deriving (Show, Eq)
+
+instance RedisArg SizeCondition where
+  encode CGT = "GT"
+  encode CLT = "LT"
+
 data ZaddOpts = ZaddOpts
-  { zaddCondition :: Maybe Condition
-  , zaddChange    :: Bool
-  , zaddIncrement :: Bool
+  { zaddCondition :: Maybe Condition -- ^ Add on condition
+  , zaddSizeCondition :: Maybe SizeCondition 
+  {- ^ Only update existing elements on condition
+  @since Redis 6.2
+  -}
+  , zaddChange    :: Bool -- ^ Modify the return value from the number of new elements added, to the total number of elements changed
+  , zaddIncrement :: Bool -- ^ When this option is specified ZADD acts like ZINCRBY. Only one score-element pair can be specified in this mode.
   } deriving (Show, Eq)
 
 
@@ -584,6 +633,7 @@ defaultZaddOpts = ZaddOpts
   { zaddCondition = Nothing
   , zaddChange    = False
   , zaddIncrement = False
+  , zaddSizeCondition = Nothing
   }
 
 
@@ -594,10 +644,11 @@ zaddOpts
     -> ZaddOpts              -- ^ options
     -> m (f Integer)
 zaddOpts key scoreMembers ZaddOpts{..} =
-    sendRequest $ concat [["ZADD", key], condition, change, increment, scores]
+    sendRequest $ concat [["ZADD", key], condition, sizeCondition, change, increment, scores]
   where
     scores = concatMap (\(x,y) -> [encode x,encode y]) scoreMembers
     condition = map encode $ maybeToList zaddCondition
+    sizeCondition = map encode $ maybeToList zaddSizeCondition
     change = ["CH" | zaddChange]
     increment = ["INCR" | zaddIncrement]
 
@@ -841,7 +892,7 @@ defaultTrimArgs = TrimArgs {
 
 data XAddOpts = XAddOpts {
     xAddTrimOpts :: TrimArgs, -- ^ Call XTRIM right after XADD 
-    xAddnoMkStream :: Bool 
+    xAddnoMkStream :: Bool
     {- ^ Don't create a new stream if it doesn't exist
 
     @since Redis 6.2
@@ -904,7 +955,7 @@ instance RedisResult a => RedisResult (XAutoclaimResult a) where
 type XAutoclaimStreamsResult = XAutoclaimResult StreamsRecord
 type XAutoclaimJustIdsResult = XAutoclaimResult ByteString
 
-xautoclaim 
+xautoclaim
     :: (RedisCtx m f)
     => ByteString -- ^ stream
     -> ByteString -- ^ group
@@ -923,8 +974,8 @@ xautoclaimOpts
     -> ByteString -- ^ start
     -> XAutoclaimOpts -- ^ options
     -> m (f XAutoclaimStreamsResult)
-xautoclaimOpts key group consumer min_idle_time start opts = sendRequest $ 
-    ["XAUTOCLAIM", key, group, consumer, encode min_idle_time, start] ++ count 
+xautoclaimOpts key group consumer min_idle_time start opts = sendRequest $
+    ["XAUTOCLAIM", key, group, consumer, encode min_idle_time, start] ++ count
     where count  = maybe [] (("COUNT":) . (:[]) . encode) (xAutoclaimCount opts)
 
 xautoclaimJustIds
@@ -1072,14 +1123,14 @@ xgroupCreateOpts stream groupName startId opts = sendRequest $ ["XGROUP", "CREAT
           mkstream    = ["MKSTREAM" | xGroupCreateMkStream opts]
           entriesRead = maybe []  (("ENTRIESREAD":) . (:[])) (xGroupCreateEntriesRead opts)
 
-xgroupCreateConsumer 
+xgroupCreateConsumer
     :: (RedisCtx m f)
     => ByteString -- ^ stream
     -> ByteString -- ^ group name
     -> ByteString -- ^ start ID
     -> m (f Status)
 xgroupCreateConsumer key group consumer = sendRequest ["XGROUP", "CREATECONSUMER", key, group, consumer]
-  
+
 xgroupSetId
     :: (RedisCtx m f)
     => ByteString -- ^ stream
@@ -1089,7 +1140,7 @@ xgroupSetId
 xgroupSetId stream group messageId = xgroupSetIdOpts stream group messageId defaultXGroupSetIdOpts
 
 newtype XGroupSetIdOpts = XGroupSetIdOpts {
-    xGroupSetIdEntriesRead :: Maybe ByteString 
+    xGroupSetIdEntriesRead :: Maybe ByteString
     {- ^ enable consumer group lag tracking for an arbitrary ID. An arbitrary ID is any ID that isn't the ID of the stream's first entry, its last entry or the zero ("0-0") ID
     
     @since Redis 7.0
@@ -1213,7 +1264,7 @@ instance RedisResult XPendingDetailRecord where
 data XPendingDetailOpts = XPendingDetailOpts
   {
     xPendingDetailConsumer :: Maybe ByteString, -- ^ see the messages having a specific owner
-    xPendingDetailIdle :: Maybe Integer 
+    xPendingDetailIdle :: Maybe Integer
     {- ^  filter pending stream entries by their idle-time, ms
     
     @since Redis 6.2
@@ -1302,7 +1353,7 @@ data XInfoConsumersResponse = XInfoConsumersResponse
     { xinfoConsumerName :: ByteString -- ^ the consumer's name
     , xinfoConsumerNumPendingMessages :: Integer -- ^ the number of entries in the PEL: pending messages for the consumer, which are messages that were delivered but are yet to be acknowledged
     , xinfoConsumerIdleTime :: Integer -- ^ the number of milliseconds that have passed since the consumer's last attempted interaction (Examples: XREADGROUP, XCLAIM, XAUTOCLAIM)
-    , xinfoConsumerInactive :: Maybe Integer 
+    , xinfoConsumerInactive :: Maybe Integer
     {- ^ the number of milliseconds that have passed since the consumer's last successful interaction (Examples: XREADGROUP that actually read some entries into the PEL, XCLAIM/XAUTOCLAIM that actually claimed some entries)
     
     @since redis 7.0
@@ -1744,3 +1795,4 @@ clusterGetKeysInSlot slot count = sendRequest ["CLUSTER", "GETKEYSINSLOT", (enco
 
 command :: (RedisCtx m f) => m (f [CMD.CommandInfo])
 command = sendRequest ["COMMAND"]
+
