@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP, OverloadedStrings, RecordWildCards, FlexibleContexts #-}
-{-# LANGUAGE InstanceSigs #-}
 
 module Database.Redis.ManualCommands where
 
@@ -8,7 +7,9 @@ import Data.ByteString (ByteString, empty, append)
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString as BS
 import Data.Maybe (maybeToList, catMaybes)
-
+#if __GLASGOW_HASKELL__ < 808
+import Data.Semigroup ((<>))
+#endif
 
 
 
