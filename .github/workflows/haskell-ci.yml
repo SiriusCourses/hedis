@@ -17,13 +17,21 @@ on:
   - push
   - pull_request
 jobs:
-  linux:
+  conctainer-job:
     name: Haskell-CI - Linux - ${{ matrix.compiler }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes:
-      60
+      10
     container:
-      image: buildpack-deps:bionic
+      image: buildpack-deps:jammy
+    services:
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     continue-on-error: ${{ matrix.allow-failure }}
     strategy:
       matrix:
@@ -41,11 +49,6 @@ jobs:
           - compiler: ghc-9.8.4
             compilerKind: ghc
             compilerVersion: 9.8.4
-            setup-method: ghcup
-            allow-failure: false
-          - compiler: ghc-9.10.2
-            compilerKind: ghc
-            compilerVersion: 9.10.2
             setup-method: ghcup
             allow-failure: false
       fail-fast: false

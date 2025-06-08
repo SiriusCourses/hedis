@@ -4,14 +4,16 @@ import qualified Test.Framework as Test
 import Database.Redis
 import Tests
 import PubSubTest
+import System.Environment
 
 main :: IO ()
 main = do
-    conn <- connect defaultConnectInfo
+    mhost <- lookupEnv "REDIS_HOST"
+    conn <- connect $ maybe id (\x -> \ci -> ci{connectHost=x}) mhost $ defaultConnectInfo 
     Test.defaultMain (tests conn)
 
 tests :: Connection -> [Test.Test]
-tests conn = map ($conn) $ concat
+tests conn = map ($ conn) $ concat
     [ testsMisc, testsKeys, testsStrings, [testHashes], testsLists, testsSets, [testHyperLogLog]
     , testsZSets, [testPubSub], [testTransaction], [testScripting]
     , testsConnection, testsClient, testsServer, [testScans, testSScan, testHScan, testZScan], [testZrangelex]
